@@ -1,7 +1,7 @@
-import { Merckel } from "./merckel";
+import { Merkel } from "./merkel";
 
-const mTreeOne = new Merckel(["one", "two", "three", "four"]);
-const mTreeTwo = new Merckel(["one", "two", "three", "four", "five"]);
+const mTreeOne = new Merkel(["one", "two", "three", "four"]);
+const mTreeTwo = new Merkel(["one", "two", "three", "four", "five"]);
 
 //console.log(JSON.stringify(mTreeTwo.getTree(), null, 2));
 

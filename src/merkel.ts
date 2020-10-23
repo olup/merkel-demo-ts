@@ -1,3 +1,4 @@
+import { runInThisContext } from "vm";
 import { hash } from "./hash";
 import { MNode, NodeAddress } from "./node";
 
@@ -6,14 +7,16 @@ type EntryNode = string;
 type Level = MNode[];
 type Tree = Level[];
 
-export class Merckel {
+export class Merkel {
   private tree: Tree = [];
+  private hashMethod: (str: string) => string;
 
-  constructor(nodes: string[]) {
-    this.createMerckel(nodes);
+  constructor(nodes: string[], hashMethod?: (str: string) => string) {
+    this.hashMethod = hashMethod || hash;
+    this.createMerkel(nodes);
   }
 
-  private createMerckel = (nodes: EntryNode[]) => {
+  private createMerkel = (nodes: EntryNode[]) => {
     let levels: Level[] = [];
 
     const addNodeToLevel = (
@@ -38,7 +41,9 @@ export class Merckel {
           : 0;
 
         const parentNode = new MNode({
-          hash: hash(thisLevel[siblingIndex].getHash() + node.getHash()),
+          hash: this.hashMethod(
+            thisLevel[siblingIndex].getHash() + node.getHash()
+          ),
           childrenAddresses: [
             [levelIndex, siblingIndex],
             [levelIndex, thisNodeIndex],
@@ -63,7 +68,7 @@ export class Merckel {
     };
 
     nodes.forEach((n, i) => {
-      const node = new MNode({ hash: hash(n), address: [0, i] });
+      const node = new MNode({ hash: this.hashMethod(n), address: [0, i] });
       const isLastNode = i === nodes.length - 1;
       addNodeToLevel(0, node, isLastNode);
     });
