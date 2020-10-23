@@ -1,67 +1,75 @@
 import { hash } from "./hash";
+import { MNode, NodeAddress } from "./node";
 
 type EntryNode = string;
-
-type MNode = {
-  hash: string;
-  childrenIndexes?: [number, number | null];
-  level: number;
-};
 
 type Level = MNode[];
 type Tree = Level[];
 
-type NodeAddress = [number, number];
-
-const createMerckel = (nodes: EntryNode[]) => {
-  let levels: Level[] = [];
-
-  const addNodeToLevel = (
-    levelIndex: number,
-    node: MNode,
-    isLastNode: boolean = false
-  ) => {
-    /** initialize level if not yet done */
-    if (!levels[levelIndex]) levels[levelIndex] = [];
-    const thisLevel = levels[levelIndex];
-
-    /** add node to level */
-    thisLevel.push(node);
-
-    /** every two nodes, level up the tree */
-    if (thisLevel.length % 2 === 0) {
-      const parentNode: MNode = {
-        hash: hash(node.hash + thisLevel[thisLevel.length - 2].hash),
-        childrenIndexes: [thisLevel.length - 2, thisLevel.length - 1],
-        level: levelIndex + 1,
-      };
-      addNodeToLevel(levelIndex + 1, parentNode, isLastNode);
-
-      /** For lone nodes except for the root */
-    } else if (isLastNode && thisLevel.length !== 1) {
-      const parentNode: MNode = {
-        hash: node.hash,
-        childrenIndexes: [thisLevel.length - 1, null],
-        level: levelIndex + 1,
-      };
-      addNodeToLevel(levelIndex + 1, parentNode, isLastNode);
-    }
-  };
-
-  nodes.forEach((n, i) => {
-    const hashedNode: MNode = { hash: hash(n), level: 0 };
-    addNodeToLevel(0, hashedNode, i === nodes.length - 1);
-  });
-
-  return levels;
-};
-
 export class Merckel {
-  private tree: Tree;
+  private tree: Tree = [];
 
   constructor(nodes: string[]) {
-    this.tree = createMerckel(nodes);
+    this.createMerckel(nodes);
   }
+
+  private createMerckel = (nodes: EntryNode[]) => {
+    let levels: Level[] = [];
+
+    const addNodeToLevel = (
+      levelIndex: number,
+      node: MNode,
+      isLastNode: boolean = false
+    ) => {
+      /** initialize level if not yet done */
+      if (!levels[levelIndex]) levels[levelIndex] = [];
+      const thisLevel = levels[levelIndex];
+
+      /** add node to level */
+      thisLevel.push(node);
+
+      /** every two nodes, level up the tree */
+      if (thisLevel.length % 2 === 0) {
+        const thisNodeIndex = node.getAddress()[1];
+        const siblingIndex = thisNodeIndex - 1;
+
+        const parentNodeIndex = levels[levelIndex + 1]
+          ? levels[levelIndex + 1].length
+          : 0;
+
+        const parentNode = new MNode({
+          hash: hash(thisLevel[siblingIndex].getHash() + node.getHash()),
+          childrenAddresses: [
+            [levelIndex, siblingIndex],
+            [levelIndex, thisNodeIndex],
+          ],
+          address: [levelIndex + 1, parentNodeIndex],
+        });
+
+        addNodeToLevel(levelIndex + 1, parentNode, isLastNode);
+
+        /** For lone nodes except for the root */
+      } else if (isLastNode && thisLevel.length !== 1) {
+        const thisNodeIndex = node.getAddress()[1];
+        const parentNodeIndex = levels[levelIndex + 1]?.length || 0;
+
+        const parentNode = new MNode({
+          hash: node.getHash(),
+          childrenAddresses: [[levelIndex, thisNodeIndex], null],
+          address: [levelIndex + 1, parentNodeIndex],
+        });
+        addNodeToLevel(levelIndex + 1, parentNode, isLastNode);
+      }
+    };
+
+    nodes.forEach((n, i) => {
+      const node = new MNode({ hash: hash(n), address: [0, i] });
+      const isLastNode = i === nodes.length - 1;
+      addNodeToLevel(0, node, isLastNode);
+    });
+
+    this.tree = levels;
+  };
 
   getTree = () => {
     return this.tree;
@@ -88,7 +96,7 @@ export class Merckel {
       address[0] > this.tree.length - 1 ||
       address[1] > this.tree[address[0]].length - 1
     )
-      throw new Error("This level does not exist on the tree");
+      throw new Error("This address does not exist on the tree");
 
     return this.tree[address[0]][address[1]];
   };

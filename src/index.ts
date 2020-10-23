@@ -1,4 +1,4 @@
-import { createMerckel, Merckel } from "./merckel";
+import { Merckel } from "./merckel";
 
 const mTreeOne = new Merckel(["one", "two", "three", "four"]);
 const mTreeTwo = new Merckel(["one", "two", "three", "four", "five"]);
